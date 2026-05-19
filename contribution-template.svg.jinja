@@ -57,10 +57,12 @@
     
     <!-- X-axis labels (months) -->
     {% for i in range(months|length) %}
+    {% if i in x_axis_label_indices %}
         {% set x_pos = 100 + (1000 * i / (months|length - 1)) if months|length > 1 else 550 %}
         <text x="{{ x_pos }}" y="580" font-family="Arial" font-size="18" text-anchor="middle" transform="rotate(0, {{ x_pos }}, 580)" fill="{{ text_color }}">
             {{ months[i] }}
         </text>
+    {% endif %}
     {% endfor %}
     
     <!-- Y-axis label -->

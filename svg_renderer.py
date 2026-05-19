@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
@@ -5,6 +6,39 @@ from jinja2 import Environment, FileSystemLoader
 from themes import Theme
 
 CURVE_RATIO = 0.25
+CHART_WIDTH = 1000
+DEFAULT_X_AXIS_LABEL_MIN_SPACING = 90
+
+
+def get_adaptive_x_axis_label_indices(
+    month_count: int,
+    chart_width: int = CHART_WIDTH,
+    min_label_spacing: int = DEFAULT_X_AXIS_LABEL_MIN_SPACING,
+) -> list[int]:
+    if month_count <= 0:
+        return []
+    if month_count == 1:
+        return [0]
+    if chart_width <= 0 or min_label_spacing <= 0:
+        return list(range(month_count))
+
+    max_labels = max(2, math.floor(chart_width / min_label_spacing) + 1)
+    if month_count <= max_labels:
+        return list(range(month_count))
+
+    interval = math.ceil((month_count - 1) / (max_labels - 1))
+    indices = list(range(0, month_count, interval))
+    last_index = month_count - 1
+
+    if indices[-1] != last_index:
+        month_spacing = chart_width / last_index
+        last_gap = (last_index - indices[-1]) * month_spacing
+        if last_gap < min_label_spacing:
+            indices[-1] = last_index
+        else:
+            indices.append(last_index)
+
+    return indices
 
 
 def render_contribution_svg(
@@ -41,6 +75,7 @@ def render_contribution_svg(
     total_reviewed = sum(reviewed_values)
     max_authored_value = max(authored_values) if authored_values else 0
     max_reviewed_value = max(reviewed_values) if reviewed_values else 0
+    x_axis_label_indices = get_adaptive_x_axis_label_indices(len(months))
 
     # Set up Jinja environment
     env = Environment(loader=FileSystemLoader("."))
@@ -64,6 +99,7 @@ def render_contribution_svg(
         reviewed_color=theme.icon_color,
         text_color=theme.text_color,
         curve_ratio=CURVE_RATIO,
+        x_axis_label_indices=x_axis_label_indices,
     )
 
     # Save the rendered SVG to a file
