@@ -11,14 +11,16 @@ A GitHub Action that generates contribution graph showing the number of pull req
     github_token: ${{ secrets.GITHUB_TOKEN }}
     output_dir: 'path/to/output'  # Optional, defaults to current directory
     exclude_authored_from_reviewed: true  # Optional, defaults to false
+    retention_months: 6  # Optional, defaults to all history
 ```
 
 ### Inputs
 
 - `targets`: Comma-separated list of targets in the format `username@owner/repo`. Multiple targets can be specified with spaces.
 - `github_token`: GitHub token for API access. Required for authentication.
-- `output_dir`: Directory where the generated PNG files will be saved. Optional, defaults to the current directory.
+- `output_dir`: Directory where the generated SVG files will be saved. Optional, defaults to the current directory.
 - `exclude_authored_from_reviewed`: Whether to exclude PRs authored by the user from the reviewed count. Optional, defaults to `false`.
+- `retention_months`: Number of recent calendar months to show, for example `6`. Optional, defaults to all history.
 
 ### [Example](https://github.com/peterxcli/peterxcli/blob/ba023f1647814d655845888fb66f904b851300ac/.github/workflows/oss-contribution-graph.yml)
 
@@ -60,6 +62,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           output_dir: 'images'
           exclude_authored_from_reviewed: ${{ github.event.inputs.exclude_review || env.EXCLUDE_REVIEW }}
+          retention_months: 6
 
       - name: Commit and push updated image
         run: |
@@ -74,12 +77,12 @@ jobs:
 
 ## Output
 
-The action generates PNG files named in the format:
+The action generates SVG files named in the format:
 `{username}-{repo_owner}-{repo_name}-contribution-graph.svg`
 
 Each graph shows:
-- Number of PRs authored by the user (blue bars)
-- Number of PRs reviewed by the user (red bars)
+- Number of PRs authored by the user
+- Number of PRs reviewed by the user
 - Total counts for both authored and reviewed PRs
 - Monthly breakdown of contributions
 
