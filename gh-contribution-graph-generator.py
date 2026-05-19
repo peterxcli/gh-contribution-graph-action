@@ -4,10 +4,10 @@ from datetime import datetime
 from pathlib import Path
 
 import click
-import pandas as pd
 from tqdm import tqdm
 import requests
 
+from retention import build_monthly_contribution_data, get_retention_month_index
 from svg_renderer import render_contribution_svg
 from themes import THEME_URI, Theme, get_themes
 from target_parser import parse_targets
@@ -20,6 +20,7 @@ def generate_contribution_graph(
     theme: Theme,
     output_dir: str = ".",
     exclude_authored_from_reviewed: bool = False,
+    retention_months: int | None = None,
 ):
     """
     Generate a contribution graph for a user's PRs in a specific repository.
@@ -28,8 +29,9 @@ def generate_contribution_graph(
         username (str): GitHub username to analyze
         repo_owner (str): Owner of the repository
         repo_name (str): Name of the repository
-        output_dir (str): Directory to save the output PNG file
+        output_dir (str): Directory to save the output SVG file
         exclude_authored_from_reviewed (bool): Whether to exclude PRs authored by the user from the reviewed count
+        retention_months (int | None): Number of recent calendar months to include
         theme (Theme): Theme object for styling the SVG
     """
     # GitHub API setup
@@ -63,6 +65,21 @@ def generate_contribution_graph(
         else:
             date = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
         return date.strftime("%Y-%m")
+
+    retention_month_index = (
+        get_retention_month_index(retention_months)
+        if retention_months is not None
+        else None
+    )
+    retention_search_filter = ""
+    if retention_month_index is not None:
+        retention_start_date = retention_month_index[0].strftime("%Y-%m-%d")
+        retention_search_filter = f" created:>={retention_start_date}"
+        print(
+            "Limiting graph to contributions from "
+            f"{retention_month_index[0].strftime('%Y-%m')} through "
+            f"{retention_month_index[-1].strftime('%Y-%m')}..."
+        )
 
     def fetch_prs_with_cursor(query, variables, desc):
         prs = []
@@ -115,7 +132,10 @@ def generate_contribution_graph(
     # Fetch authored PRs
     print(f"Fetching PRs authored by {username}...")
     authored_variables = {
-        "searchQuery": f"repo:{repo_owner}/{repo_name} is:pr author:{username}"
+        "searchQuery": (
+            f"repo:{repo_owner}/{repo_name} is:pr author:{username}"
+            f"{retention_search_filter}"
+        )
     }
     authored_prs = fetch_prs_with_cursor(
         prs_query, authored_variables, "Fetching authored PRs"
@@ -124,7 +144,10 @@ def generate_contribution_graph(
 
     # Fetch reviewed PRs
     print(f"\nFetching PRs reviewed by {username}...")
-    reviewed_query = f"repo:{repo_owner}/{repo_name} is:pr reviewed-by:{username}"
+    reviewed_query = (
+        f"repo:{repo_owner}/{repo_name} is:pr reviewed-by:{username}"
+        f"{retention_search_filter}"
+    )
     if exclude_authored_from_reviewed:
         reviewed_query += f" -author:{username}"
     reviewed_variables = {"searchQuery": reviewed_query}
@@ -133,33 +156,11 @@ def generate_contribution_graph(
     )
     reviewed_dates = [get_month_year(pr["createdAt"]) for pr in reviewed_prs]
 
-    # Create DataFrames for counting
-    authored_df = (
-        pd.DataFrame(authored_dates, columns=["month"])
-        .groupby("month")
-        .size()
-        .reset_index(name="authored_count")
+    months, authored_values, reviewed_values = build_monthly_contribution_data(
+        authored_dates,
+        reviewed_dates,
+        retention_month_index,
     )
-    reviewed_df = (
-        pd.DataFrame(reviewed_dates, columns=["month"])
-        .groupby("month")
-        .size()
-        .reset_index(name="reviewed_count")
-    )
-
-    # Merge DataFrames
-    merged_df = pd.merge(authored_df, reviewed_df, on="month", how="outer").fillna(0)
-    merged_df["month"] = pd.to_datetime(merged_df["month"], format="%Y-%m")
-
-    # Ensure the dataframe is sorted by month
-    merged_df = merged_df.sort_values("month")
-
-    # Format month strings
-    months = [dt.strftime("%Y-%m") for dt in merged_df["month"]]
-
-    # Get values
-    authored_values = merged_df["authored_count"].tolist()
-    reviewed_values = merged_df["reviewed_count"].tolist()
 
     render_contribution_svg(
         username=username,
@@ -182,7 +183,7 @@ def generate_contribution_graph(
 @click.option(
     "--output-dir",
     required=True,
-    help="Directory to save the output PNG files",
+    help="Directory to save the output SVG files",
 )
 @click.option(
     "--exclude-authored-from-reviewed",
@@ -202,6 +203,11 @@ def generate_contribution_graph(
     "--reviewed-color",
     help="Color for reviewed PRs line and points",
 )
+@click.option(
+    "--retention-months",
+    type=click.IntRange(min=1),
+    help="Limit the graph to the most recent N calendar months, for example 6.",
+)
 def main(
     targets,
     output_dir,
@@ -209,17 +215,19 @@ def main(
     theme,
     authored_color,
     reviewed_color,
+    retention_months,
 ):
     """
     Generate contribution graphs for multiple targets.
 
     Args:
         targets (str): List of targets in the format 'username@owner/repo'. Multiple targets can be separated by spaces or commas.
-        output_dir (str): Directory to save the output PNG files
+        output_dir (str): Directory to save the output SVG files
         exclude_authored_from_reviewed (bool): Whether to exclude PRs authored by the user from the reviewed count
         theme (str): Theme for the SVG
         authored_color (str): Color for authored PRs line and points
         reviewed_color (str): Color for reviewed PRs line and points
+        retention_months (int | None): Number of recent calendar months to include
     """
     available_themes = get_themes()
     theme: Theme = available_themes.get(theme)
@@ -247,6 +255,7 @@ def main(
                 theme,
                 output_dir,
                 exclude_authored_from_reviewed,
+                retention_months,
             )
         except Exception as e:
             click.echo(

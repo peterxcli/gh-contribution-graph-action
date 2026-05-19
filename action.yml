@@ -10,7 +10,7 @@ inputs:
     description: 'GitHub token for API access'
     required: true
   output_dir:
-    description: 'Directory to save the generated PNG files'
+    description: 'Directory to save the generated SVG files'
     required: false
     default: '.'
   exclude_authored_from_reviewed:
@@ -26,6 +26,9 @@ inputs:
     required: false
   reviewed_color:
     description: 'Color for reviewed contributions (default: based on theme)'
+    required: false
+  retention_months:
+    description: 'Number of recent calendar months to show, for example 6. Defaults to all history.'
     required: false
 
 runs:
@@ -55,5 +58,6 @@ runs:
           --output-dir "${{ env.OUTPUT_DIR }}" \
           ${{ inputs.exclude_authored_from_reviewed == 'true' && '--exclude-authored-from-reviewed' || '' }} \
           --theme "${{ inputs.theme }}" \
+          ${{ inputs.retention_months && format('--retention-months {0}', inputs.retention_months) || '' }} \
           ${{ inputs.authored_color && format('--authored-color {0}', inputs.authored_color) || '' }} \
           ${{ inputs.reviewed_color && format('--reviewed-color {0}', inputs.reviewed_color) || '' }}
