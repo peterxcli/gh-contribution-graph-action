@@ -27,7 +27,7 @@
     <line x1="100" y1="100" x2="100" y2="550" stroke="#555555" stroke-width="1.5"/>
 
     <!-- X-axis line -->
-    <line x1="100" y1="550" x2="1100" y2="550" stroke="#555555" stroke-width="1.5"/>
+    <line x1="100" y1="550" x2="{{ 100 + chart_width }}" y2="550" stroke="#555555" stroke-width="1.5"/>
 
     <!-- Chart grid -->
     <g stroke="#ffffff" stroke-width="1">
@@ -35,11 +35,11 @@
         {% set max_y_value = [max_authored_value, max_reviewed_value]|max * 1.1 %}
         {% for i in range(grid_lines + 1) %}
             {% set y_pos = 550 - (450 * i / grid_lines) %}
-            <line x1="100" y1="{{ y_pos }}" x2="1100" y2="{{ y_pos }}" stroke-opacity="0.6"/>
+            <line x1="100" y1="{{ y_pos }}" x2="{{ 100 + chart_width }}" y2="{{ y_pos }}" stroke-opacity="0.6"/>
         {% endfor %}
         
         {% for i in range(months|length) %}
-            {% set x_pos = 100 + (1000 * i / (months|length - 1)) if months|length > 1 else 550 %}
+            {% set x_pos = 100 + (chart_width * i / (months|length - 1)) if months|length > 1 else 100 + (chart_width / 2) %}
             <line x1="{{ x_pos }}" y1="100" x2="{{ x_pos }}" y2="550" stroke-opacity="0.6"/>
         {% endfor %}
     </g>
@@ -58,7 +58,7 @@
     <!-- X-axis labels (months) -->
     {% for i in range(months|length) %}
     {% if i in x_axis_label_indices %}
-        {% set x_pos = 100 + (1000 * i / (months|length - 1)) if months|length > 1 else 550 %}
+        {% set x_pos = 100 + (chart_width * i / (months|length - 1)) if months|length > 1 else 100 + (chart_width / 2) %}
         <text x="{{ x_pos }}" y="580" font-family="Arial" font-size="18" text-anchor="middle" transform="rotate(0, {{ x_pos }}, 580)" fill="{{ text_color }}">
             {{ months[i] }}
         </text>
@@ -77,11 +77,11 @@
         stroke-width="3"
         class="animated-line"
         d="{% for i in range(months|length) %}
-            {% set x_pos = 100 + (1000 * i / (months|length - 1)) if months|length > 1 else 550 %}
+            {% set x_pos = 100 + (chart_width * i / (months|length - 1)) if months|length > 1 else 100 + (chart_width / 2) %}
             {% set y_pos = 550 - (450 * authored_values[i] / max_y_value) if max_y_value > 0 else 550 %}
             {% if i == 0 %}M{{ x_pos }},{{ y_pos }}
             {% else %}
-                {% set prev_x_pos = 100 + (1000 * (i-1) / (months|length - 1)) if months|length > 1 else 550 %}
+                {% set prev_x_pos = 100 + (chart_width * (i-1) / (months|length - 1)) if months|length > 1 else 100 + (chart_width / 2) %}
                 {% set prev_y_pos = 550 - (450 * authored_values[i-1] / max_y_value) if max_y_value > 0 else 550 %}
                 {% set control_x1 = prev_x_pos + (x_pos - prev_x_pos) * curve_ratio %}
                 {% set control_x2 = x_pos - (x_pos - prev_x_pos) * curve_ratio %}
@@ -96,11 +96,11 @@
         stroke-width="3"
         class="animated-line"
         d="{% for i in range(months|length) %}
-            {% set x_pos = 100 + (1000 * i / (months|length - 1)) if months|length > 1 else 550 %}
+            {% set x_pos = 100 + (chart_width * i / (months|length - 1)) if months|length > 1 else 100 + (chart_width / 2) %}
             {% set y_pos = 550 - (450 * reviewed_values[i] / max_y_value) if max_y_value > 0 else 550 %}
             {% if i == 0 %}M{{ x_pos }},{{ y_pos }}
             {% else %}
-                {% set prev_x_pos = 100 + (1000 * (i-1) / (months|length - 1)) if months|length > 1 else 550 %}
+                {% set prev_x_pos = 100 + (chart_width * (i-1) / (months|length - 1)) if months|length > 1 else 100 + (chart_width / 2) %}
                 {% set prev_y_pos = 550 - (450 * reviewed_values[i-1] / max_y_value) if max_y_value > 0 else 550 %}
                 {% set control_x1 = prev_x_pos + (x_pos - prev_x_pos) * curve_ratio %}
                 {% set control_x2 = x_pos - (x_pos - prev_x_pos) * curve_ratio %}
@@ -110,7 +110,7 @@
     
     <!-- Authored data points with values -->
     {% for i in range(months|length) %}
-        {% set x_pos = 100 + (1000 * i / (months|length - 1)) if months|length > 1 else 550 %}
+        {% set x_pos = 100 + (chart_width * i / (months|length - 1)) if months|length > 1 else 100 + (chart_width / 2) %}
         {% set y_pos = 550 - (450 * authored_values[i] / max_y_value) if max_y_value > 0 else 550 %}
         {% set delay = 1.5 * i / (months|length) if months|length > 1 else 0.75 %}
         <circle cx="{{ x_pos }}" cy="{{ y_pos }}" r="5" fill="{{ authored_color }}" opacity="0">
@@ -120,7 +120,7 @@
     
     <!-- Reviewed data points with values -->
     {% for i in range(months|length) %}
-        {% set x_pos = 100 + (1000 * i / (months|length - 1)) if months|length > 1 else 550 %}
+        {% set x_pos = 100 + (chart_width * i / (months|length - 1)) if months|length > 1 else 100 + (chart_width / 2) %}
         {% set y_pos = 550 - (450 * reviewed_values[i] / max_y_value) if max_y_value > 0 else 550 %}
         {% set delay = 1.5 * i / (months|length) if months|length > 1 else 0.75 %}
         <circle cx="{{ x_pos }}" cy="{{ y_pos }}" r="5" fill="{{ reviewed_color }}" opacity="0">

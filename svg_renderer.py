@@ -75,7 +75,9 @@ def render_contribution_svg(
     total_reviewed = sum(reviewed_values)
     max_authored_value = max(authored_values) if authored_values else 0
     max_reviewed_value = max(reviewed_values) if reviewed_values else 0
-    x_axis_label_indices = get_adaptive_x_axis_label_indices(len(months))
+    x_axis_label_indices = get_adaptive_x_axis_label_indices(
+        len(months), chart_width=CHART_WIDTH
+    )
 
     # Set up Jinja environment
     env = Environment(loader=FileSystemLoader("."))
@@ -100,6 +102,7 @@ def render_contribution_svg(
         text_color=theme.text_color,
         curve_ratio=CURVE_RATIO,
         x_axis_label_indices=x_axis_label_indices,
+        chart_width=CHART_WIDTH,
     )
 
     # Save the rendered SVG to a file

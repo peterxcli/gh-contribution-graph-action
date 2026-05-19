@@ -63,3 +63,34 @@ def test_rendered_svg_only_includes_adaptive_x_axis_labels(tmp_path):
             assert month in svg
         else:
             assert month not in svg
+
+
+def test_renderer_passes_chart_width_to_template(monkeypatch, tmp_path):
+    captured_context = {}
+
+    class FakeTemplate:
+        def render(self, **context):
+            captured_context.update(context)
+            return "<svg />"
+
+    class FakeEnvironment:
+        def __init__(self, **_kwargs):
+            pass
+
+        def get_template(self, _template_name):
+            return FakeTemplate()
+
+    monkeypatch.setattr("svg_renderer.Environment", FakeEnvironment)
+
+    render_contribution_svg(
+        username="example_user",
+        repo_owner="example_org",
+        repo_name="example_repo",
+        months=_months(3),
+        authored_values=[0, 1, 0],
+        reviewed_values=[1, 0, 1],
+        theme=_theme(),
+        output_dir=tmp_path,
+    )
+
+    assert captured_context["chart_width"] == CHART_WIDTH
