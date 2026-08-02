@@ -149,6 +149,7 @@ def generate_contribution_graph(
 
     # Merge DataFrames
     merged_df = pd.merge(authored_df, reviewed_df, on="month", how="outer").fillna(0)
+    merged_df = merged_df.astype({"authored_count": int, "reviewed_count": int})
     merged_df["month"] = pd.to_datetime(merged_df["month"], format="%Y-%m")
 
     # Ensure the dataframe is sorted by month
