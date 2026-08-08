@@ -171,6 +171,7 @@ def generate_contribution_graph(
         reviewed_values=reviewed_values,
         theme=theme,
         output_dir=output_path,
+        exclude_authored_from_reviewed=exclude_authored_from_reviewed,
     )
 
 

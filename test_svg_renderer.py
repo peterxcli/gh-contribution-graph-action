@@ -1,4 +1,7 @@
 from pathlib import Path
+import xml.etree.ElementTree as ET
+
+import pytest
 
 from svg_renderer import (
     DEFAULT_X_AXIS_LABEL_MIN_SPACING,
@@ -94,3 +97,43 @@ def test_renderer_passes_chart_width_to_template(monkeypatch, tmp_path):
     )
 
     assert captured_context["chart_width"] == CHART_WIDTH
+
+
+@pytest.mark.parametrize(
+    ("exclude_authored_from_reviewed", "reviewed_url"),
+    [
+        (
+            False,
+            "https://github.com/example_org/example_repo/pulls?q=is%3Apr+reviewed-by%3Aexample_user",
+        ),
+        (
+            True,
+            "https://github.com/example_org/example_repo/pulls?q=is%3Apr+reviewed-by%3Aexample_user+-author%3Aexample_user",
+        ),
+    ],
+)
+def test_total_labels_link_to_matching_pull_requests(
+    tmp_path, exclude_authored_from_reviewed, reviewed_url
+):
+    svg_path = render_contribution_svg(
+        username="example_user",
+        repo_owner="example_org",
+        repo_name="example_repo",
+        months=_months(1),
+        authored_values=[1],
+        reviewed_values=[2],
+        theme=_theme(),
+        output_dir=tmp_path,
+        exclude_authored_from_reviewed=exclude_authored_from_reviewed,
+    )
+
+    links = ET.parse(svg_path).getroot().findall(
+        ".//{http://www.w3.org/2000/svg}a"
+    )
+
+    assert "Total PRs Authored" in "".join(links[0].itertext())
+    assert links[0].attrib["href"] == (
+        "https://github.com/example_org/example_repo/pulls?q=is%3Apr+author%3Aexample_user"
+    )
+    assert "Total PRs Reviewed" in "".join(links[1].itertext())
+    assert links[1].attrib["href"] == reviewed_url

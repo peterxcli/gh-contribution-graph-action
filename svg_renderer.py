@@ -1,5 +1,6 @@
 import math
 from pathlib import Path
+from urllib.parse import quote, urlencode
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -50,6 +51,7 @@ def render_contribution_svg(
     reviewed_values: list,
     theme: Theme,
     output_dir: str = ".",
+    exclude_authored_from_reviewed: bool = False,
 ):
     """
     Generate an SVG contribution graph using the Jinja template.
@@ -62,6 +64,7 @@ def render_contribution_svg(
         authored_values (list): List of authored PR counts per month
         reviewed_values (list): List of reviewed PR counts per month
         output_dir (str): Directory to save the output SVG file
+        exclude_authored_from_reviewed (bool): Whether authored PRs are excluded from reviewed PRs
         background_color (str): Background color of the SVG
         authored_color (str): Color for authored PRs line and points
         reviewed_color (str): Color for reviewed PRs line and points
@@ -78,6 +81,10 @@ def render_contribution_svg(
     x_axis_label_indices = get_adaptive_x_axis_label_indices(
         len(months), chart_width=CHART_WIDTH
     )
+    pulls_url = f"https://github.com/{quote(repo_owner, safe='')}/{quote(repo_name, safe='')}/pulls"
+    reviewed_query = f"is:pr reviewed-by:{username}"
+    if exclude_authored_from_reviewed:
+        reviewed_query += f" -author:{username}"
 
     # Set up Jinja environment
     env = Environment(loader=FileSystemLoader("."))
@@ -93,6 +100,8 @@ def render_contribution_svg(
         reviewed_values=reviewed_values,
         total_authored=total_authored,
         total_reviewed=total_reviewed,
+        authored_url=f"{pulls_url}?{urlencode({'q': f'is:pr author:{username}'})}",
+        reviewed_url=f"{pulls_url}?{urlencode({'q': reviewed_query})}",
         max_authored_value=max_authored_value,
         max_reviewed_value=max_reviewed_value,
         background_color=theme.background_color,
